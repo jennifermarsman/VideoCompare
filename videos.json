@@ -1,0 +1,27 @@
+[
+  {
+    "model1_path": "Model1/Show_me_the_proper_way_to_separate_an_egg_white.mp4",
+    "model2_path": "Model2/egg_whites_model2.mp4",
+    "prompt": "Show me the proper way to separate an egg white"
+  },
+  {
+    "model1_path": "Model1/What_s_the_trick_to_brushing_a_dog_s_teeth_.mp4",
+    "model2_path": "Model2/dog_teeth_model2.mp4",
+    "prompt": "What's the trick to brushing a dog's teeth?"
+  },
+  {
+    "model1_path": "Model1/How_do_you_spatchcock_a_chicken_.mp4",
+    "model2_path": "Model2/spatchcock_chicken_model2.mp4",
+    "prompt": "How do you spatchcock a chicken?"
+  },
+  {
+    "model1_path": "Model1/Show_me_how_to_do_a_French_braid.mp4",
+    "model2_path": "Model2/french_braid_model2.mp4",
+    "prompt": "Show me how to do a French braid"
+  },
+  {
+    "model1_path": "Model1/Show_me_how_to_do_cornrows_.mp4",
+    "model2_path": "Model2/cornrows_model2.mp4",
+    "prompt": "Show me how to do cornrows."
+  }
+]   
