@@ -135,7 +135,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def generate_single_video(self, client, deployment_name, prompt, safe_filename, model_prefix, directory):
         """Generate a single video using Azure OpenAI"""
         import requests
-        from urllib.parse import urlparse
         
         # Call Azure OpenAI to generate video
         response = client.videos.generate(
@@ -153,7 +152,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             raise Exception("No video URL in response from Azure OpenAI")
         
         # Validate URL is from Azure
-        parsed_url = urlparse(video_url)
+        parsed_url = urllib.parse.urlparse(video_url)
         if not parsed_url.hostname or not parsed_url.hostname.endswith('.azure.com'):
             raise Exception(f"Untrusted video URL: {parsed_url.hostname}")
         
