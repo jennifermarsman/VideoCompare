@@ -412,21 +412,19 @@
                         this.render();
 
                         // Show success message
-                        this.showStatusMessage('✅ Videos generated successfully!', 'success');
+                        this.showStatusMessage(`✅ Videos generated successfully! The new video pair has been added to the carousel.`, 'success');
                         
-                        // Alert user and close input
-                        alert(`Video generation complete!\n\nPrompt: "${prompt}"\n\nThe new video pair has been added to the end of the carousel.`);
-                        
-                        // Reset form
-                        input.value = '';
-                        this.togglePromptInput();
+                        // Reset form and close after a delay
+                        setTimeout(() => {
+                            input.value = '';
+                            this.togglePromptInput();
+                        }, 3000);
                     } else {
                         throw new Error('Video generation failed');
                     }
                 } catch (error) {
                     console.error('Error generating videos:', error);
                     this.showStatusMessage(`❌ Error: ${error.message}`, 'error');
-                    alert(`Failed to generate videos: ${error.message}`);
                 } finally {
                     submitBtn.disabled = false;
                 }

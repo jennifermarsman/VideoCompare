@@ -87,6 +87,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             # Get environment variables
             azure_endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
             api_key = os.getenv('AZURE_OPENAI_API_KEY')
+            api_version = os.getenv('AZURE_OPENAI_API_VERSION', '2024-08-01-preview')
             sora1_deployment = os.getenv('SORA1_DEPLOYMENT_NAME', 'sora-1')
             sora2_deployment = os.getenv('SORA2_DEPLOYMENT_NAME', 'sora-2')
             
@@ -94,8 +95,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 raise Exception("Azure OpenAI credentials not configured. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY environment variables.")
             
             # Create sanitized filename from prompt
-            safe_filename = re.sub(r'[^\w\s-]', '', prompt)
-            safe_filename = re.sub(r'[-\s]+', '_', safe_filename)
+            safe_filename = re.sub(r'[^\w]', '_', prompt)
             safe_filename = safe_filename[:50]  # Limit length
             
             # Create directories if they don't exist
@@ -104,7 +104,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             # Initialize Azure OpenAI client
             client = AzureOpenAI(
-                api_version="2024-08-01-preview",
+                api_version=api_version,
                 azure_endpoint=azure_endpoint,
                 api_key=api_key
             )
@@ -135,6 +135,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def generate_single_video(self, client, deployment_name, prompt, safe_filename, model_prefix, directory):
         """Generate a single video using Azure OpenAI"""
         import requests
+        from urllib.parse import urlparse
         
         # Call Azure OpenAI to generate video
         response = client.videos.generate(
@@ -142,14 +143,25 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             prompt=prompt
         )
         
-        # Get the video URL from response
-        video_url = response.data[0].url if hasattr(response, 'data') else response.url
+        # Get the video URL from response with proper error handling
+        video_url = None
+        if hasattr(response, 'data') and len(response.data) > 0:
+            video_url = response.data[0].url
+        elif hasattr(response, 'url'):
+            video_url = response.url
+        else:
+            raise Exception("No video URL in response from Azure OpenAI")
         
-        # Download the video
+        # Validate URL is from Azure
+        parsed_url = urlparse(video_url)
+        if not parsed_url.hostname or not parsed_url.hostname.endswith('.azure.com'):
+            raise Exception(f"Untrusted video URL: {parsed_url.hostname}")
+        
+        # Download the video with timeout
         video_filename = f"{model_prefix}_{safe_filename}.mp4"
         video_path = os.path.join(directory, video_filename)
         
-        video_response = requests.get(video_url)
+        video_response = requests.get(video_url, timeout=300)  # 5 minute timeout for video download
         video_response.raise_for_status()
         
         with open(video_path, 'wb') as f:
