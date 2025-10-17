@@ -159,6 +159,132 @@
             border-radius: 10px;
         }
 
+        .add-prompt-section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .add-prompt-btn {
+            background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .add-prompt-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 176, 155, 0.4);
+        }
+
+        .add-prompt-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .prompt-input-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .prompt-input-container.active {
+            display: block;
+        }
+
+        .prompt-input {
+            width: 100%;
+            max-width: 600px;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .prompt-submit-btn, .prompt-cancel-btn {
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .prompt-submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .prompt-submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .prompt-submit-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .prompt-cancel-btn {
+            background: #555;
+            color: white;
+        }
+
+        .prompt-cancel-btn:hover {
+            background: #666;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .status-message.info {
+            background: #1e3a5f;
+            color: #6db3f2;
+        }
+
+        .status-message.success {
+            background: #1e4620;
+            color: #6bcf73;
+        }
+
+        .status-message.error {
+            background: #4a1f1f;
+            color: #ff6b6b;
+        }
+
         @media (max-width: 768px) {
             .video-comparison {
                 flex-direction: column;
@@ -166,6 +292,10 @@
             
             .container {
                 padding: 10px;
+            }
+
+            .prompt-actions {
+                flex-direction: column;
             }
         }
     </style>
@@ -176,6 +306,29 @@
         
         <div id="app">
             <div class="loading">Loading videos...</div>
+        </div>
+
+        <div class="add-prompt-section">
+            <button class="add-prompt-btn" onclick="carousel.togglePromptInput()">➕ Add New Prompt</button>
+            
+            <div class="prompt-input-container" id="promptInputContainer">
+                <input 
+                    type="text" 
+                    class="prompt-input" 
+                    id="promptInput" 
+                    placeholder="Enter your prompt here (e.g., 'A cat playing piano')..."
+                    maxlength="500"
+                />
+                <div class="prompt-actions">
+                    <button class="prompt-submit-btn" id="submitPromptBtn" onclick="carousel.submitPrompt()">
+                        Generate Videos
+                    </button>
+                    <button class="prompt-cancel-btn" onclick="carousel.togglePromptInput()">
+                        Cancel
+                    </button>
+                </div>
+                <div class="status-message" id="statusMessage"></div>
+            </div>
         </div>
     </div>
 
@@ -200,6 +353,94 @@
                 } catch (error) {
                     this.renderError(`Failed to load videos: ${error.message}`);
                 }
+            }
+
+            togglePromptInput() {
+                const container = document.getElementById('promptInputContainer');
+                const input = document.getElementById('promptInput');
+                container.classList.toggle('active');
+                
+                if (container.classList.contains('active')) {
+                    input.focus();
+                    this.hideStatusMessage();
+                } else {
+                    input.value = '';
+                    this.hideStatusMessage();
+                }
+            }
+
+            async submitPrompt() {
+                const input = document.getElementById('promptInput');
+                const submitBtn = document.getElementById('submitPromptBtn');
+                const prompt = input.value.trim();
+
+                if (!prompt) {
+                    this.showStatusMessage('Please enter a prompt', 'error');
+                    return;
+                }
+
+                // Disable submit button and show loading state
+                submitBtn.disabled = true;
+                this.showStatusMessage('Generating videos... This may take a few minutes.', 'info');
+
+                try {
+                    const response = await fetch('/api/generate-videos', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(errorText || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Add new video pair to the list
+                        this.videos.push({
+                            model1_path: result.model1_path,
+                            model2_path: result.model2_path,
+                            prompt: result.prompt
+                        });
+
+                        // Navigate to the new video
+                        this.currentIndex = this.videos.length - 1;
+                        this.render();
+
+                        // Show success message
+                        this.showStatusMessage('✅ Videos generated successfully!', 'success');
+                        
+                        // Alert user and close input
+                        alert(`Video generation complete!\n\nPrompt: "${prompt}"\n\nThe new video pair has been added to the end of the carousel.`);
+                        
+                        // Reset form
+                        input.value = '';
+                        this.togglePromptInput();
+                    } else {
+                        throw new Error('Video generation failed');
+                    }
+                } catch (error) {
+                    console.error('Error generating videos:', error);
+                    this.showStatusMessage(`❌ Error: ${error.message}`, 'error');
+                    alert(`Failed to generate videos: ${error.message}`);
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            }
+
+            showStatusMessage(message, type) {
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.textContent = message;
+                statusMsg.className = `status-message active ${type}`;
+            }
+
+            hideStatusMessage() {
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message';
             }
 
             render() {
